@@ -24,6 +24,7 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.pm.PackageManager;
 import android.content.res.Configuration;
+import android.graphics.Color;
 import android.graphics.ImageFormat;
 import android.graphics.Matrix;
 import android.graphics.Point;
@@ -55,6 +56,7 @@ import android.util.Log;
 import android.util.Size;
 import android.util.SparseIntArray;
 import android.view.LayoutInflater;
+import android.view.MotionEvent;
 import android.view.Surface;
 import android.view.TextureView;
 import android.view.View;
@@ -75,7 +77,7 @@ import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 
 public class Camera2BasicFragment extends Fragment
-        implements View.OnClickListener, ActivityCompat.OnRequestPermissionsResultCallback, View.OnLongClickListener {
+        implements View.OnClickListener, ActivityCompat.OnRequestPermissionsResultCallback, View.OnTouchListener, View.OnLongClickListener{
 
     /**
      * Conversion from screen rotation to JPEG orientation.
@@ -523,6 +525,7 @@ public class Camera2BasicFragment extends Fragment
     public void onViewCreated(final View view, Bundle savedInstanceState) {
         mButton = view.findViewById(R.id.picture);
         mButton.setOnClickListener(this);
+        mButton.setOnTouchListener(this);
         mButton.setOnLongClickListener(this);
         view.findViewById(R.id.info).setOnClickListener(this);
         mTextureView = (AutoFitTextureView) view.findViewById(R.id.texture);
@@ -1119,7 +1122,6 @@ public class Camera2BasicFragment extends Fragment
 
     private void stopRecordingVideo() {
         // UI
-        mIsRecordingVideo = false;
         mButton.setText(R.string.record);
 
         // Added by Ben Ning, to resolve exception issue when stop recording.
@@ -1142,6 +1144,7 @@ public class Camera2BasicFragment extends Fragment
         }
         mNextVideoAbsolutePath = null;
         createCameraPreviewSession();
+        mIsRecordingVideo = false;
     }
 
     @Override
@@ -1166,17 +1169,51 @@ public class Camera2BasicFragment extends Fragment
 
     @Override
     public boolean onLongClick(View view) {
+
         switch (view.getId()) {
             case R.id.picture: {
-                if (mIsRecordingVideo) {
-                    stopRecordingVideo();
-                } else {
+                if (!mIsRecordingVideo) {
+
+                    Toast.makeText(getContext(), "start recording", Toast.LENGTH_SHORT).show();
                     startRecordingVideo();
                 }
+
+                break;
+            }
+
+        }
+
+        return true;
+    }
+
+
+
+    @Override
+    public boolean onTouch(View view, MotionEvent motionEvent) {
+
+        switch(motionEvent.getAction()){
+            case MotionEvent.ACTION_CANCEL:
+            case MotionEvent.ACTION_UP:{
+                if (mIsRecordingVideo) {
+
+                    new Handler().postDelayed(new Runnable() {
+                        @Override
+                        public void run() {
+
+                            Toast.makeText(getContext(), "stop recording", Toast.LENGTH_SHORT).show();
+                            stopRecordingVideo();
+
+                        }
+                    }, 1000);
+
+
+                }
+
                 break;
             }
         }
-        return true;
+
+        return false;
     }
 
     private void setAutoFlash(CaptureRequest.Builder requestBuilder) {
@@ -1185,6 +1222,8 @@ public class Camera2BasicFragment extends Fragment
                     CaptureRequest.CONTROL_AE_MODE_ON_AUTO_FLASH);
         }
     }
+
+
 
     /**
      * Saves a JPEG {@link Image} into the specified {@link File}.
