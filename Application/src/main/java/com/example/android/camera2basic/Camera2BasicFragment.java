@@ -803,7 +803,11 @@ public class Camera2BasicFragment extends Fragment
      * Creates a new {@link CameraCaptureSession} for camera preview.
      */
     private void createCameraPreviewSession() {
+        if (null == mCameraDevice || !mTextureView.isAvailable() || null == mPreviewSize) {
+            return;
+        }
         try {
+            closePreviewSession();
             SurfaceTexture texture = mTextureView.getSurfaceTexture();
             assert texture != null;
 
@@ -1122,29 +1126,32 @@ public class Camera2BasicFragment extends Fragment
 
     private void stopRecordingVideo() {
         // UI
+        mIsRecordingVideo = false;
         mButton.setText(R.string.record);
 
-        // Added by Ben Ning, to resolve exception issue when stop recording.
-        try {
-            mCaptureSession.stopRepeating();
-            mCaptureSession.abortCaptures();
-        } catch (CameraAccessException e) {
-            e.printStackTrace();
-        }
-
-        // Stop recording
-        mMediaRecorder.stop();
-        mMediaRecorder.reset();
+//	      //left this code just in case.
+//        // Added by Ben Ning, to resolve exception issue when stop recording.
+//        try {
+//            mCaptureSession.stopRepeating();
+//            mCaptureSession.abortCaptures();
+//        } catch (CameraAccessException e) {
+//            e.printStackTrace();
+//        }
 
         Activity activity = getActivity();
         if (null != activity) {
             Toast.makeText(activity, "Video saved: " + mNextVideoAbsolutePath,
                     Toast.LENGTH_SHORT).show();
-            Log.d(TAG, "Video saved: " + mNextVideoAbsolutePath);
         }
-        mNextVideoAbsolutePath = null;
-        createCameraPreviewSession();
-        mIsRecordingVideo = false;
+        try {
+            closePreviewSession();
+            createCameraPreviewSession();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        // Stop recording
+        mMediaRecorder.stop();
+        mMediaRecorder.reset();
     }
 
     @Override
@@ -1195,18 +1202,8 @@ public class Camera2BasicFragment extends Fragment
             case MotionEvent.ACTION_CANCEL:
             case MotionEvent.ACTION_UP:{
                 if (mIsRecordingVideo) {
-
-                    new Handler().postDelayed(new Runnable() {
-                        @Override
-                        public void run() {
-
-                            Toast.makeText(getContext(), "stop recording", Toast.LENGTH_SHORT).show();
-                            stopRecordingVideo();
-
-                        }
-                    }, 1000);
-
-
+                    Toast.makeText(getContext(), "stop recording", Toast.LENGTH_SHORT).show();
+                    stopRecordingVideo();
                 }
 
                 break;
